@@ -3,3 +3,6 @@ class InternalError(Exception):
 
 class DBError(InternalError):
     pass
+
+class TGBotError(InternalError):
+    pass
