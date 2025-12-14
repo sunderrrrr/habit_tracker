@@ -124,12 +124,12 @@ class Handler:
             
             if not habits:
                 await update.message.reply_text(
-                    config.NO_HABITS,
+                    config.no_habits_msg,
                     reply_markup=self.get_kb()
                 )
                 return
             
-            message = "📋 *Ваши привычки:*\n\n"
+            message = "📋*Ваши привычки:*\n\n"
             
             for habit in habits:
                 streak = habit['current_streak']
@@ -144,8 +144,7 @@ class Handler:
                 else:
                     emoji = "📝"                
                 last_date = habit['last_completed'] or "Никогда"
-                message += f""" {emoji} *{habit['name']}*\n📅 Серия: {streak} дней\n📊 Всего выполнено: {habit['total_completions']} раз\n🗓️ Последнее выполнение: {last_date}\n ID: {habit["id"]}\n
-                           """
+                message += f""" {emoji} *{habit['name']}*\n📅 Серия: {streak} дней\n📊 Всего выполнено: {habit['total_completions']} раз\n🗓️ Последнее выполнение: {last_date}\n ID: {habit["id"]}\n\n"""
             
             await update.message.reply_text(
                 message,
@@ -163,7 +162,7 @@ class Handler:
     async def habits_list_to_delete(self,  update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         try:
             habits = self.db.get_user_habits(update.effective_user.id)  
-            if habits == {}:
+            if not habits:
                 await self.reply(update, 
                                 config.no_habits_msg,
                                 self.get_kb)
@@ -194,10 +193,7 @@ class Handler:
         
         confirm_btns = [["Да, удалить", "Нет, я передумал"], [config.back_btn_text]]
         await update.message.reply_text(
-        f"""
-        Вы уверены что хотите удалить привычку '{habit_name}'?\n\n
-        Это действие не может быть прервано!
-        """, 
+        f"Вы уверены что хотите удалить привычку '{habit_name}'?\n\nЭто действие не может быть прервано!", 
         reply_markup=ReplyKeyboardMarkup(confirm_btns, resize_keyboard=True))
         
         return DELETE_CONFIRM

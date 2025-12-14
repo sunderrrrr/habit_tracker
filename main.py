@@ -25,7 +25,8 @@ def main():
         
         for msg_handler in hndlr.get_message_handlers():
             app.add_handler(msg_handler)
-        app.add_handler(hndlr.get_conversation_handlers())
+        for conv_handler in hndlr.get_conversation_handlers():
+            app.add_handler(conv_handler)
         app.run_polling()
     except Exception as e:
         logging.error(f"Bot init error: {e}")
