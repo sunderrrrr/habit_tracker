@@ -22,6 +22,9 @@ def main():
     app = Application.builder().token(token).build()
     try:
         app.add_handler(CommandHandler("start", hndlr.start))
+        
+        for msg_handler in hndlr.get_message_handlers():
+            app.add_handler(msg_handler)
         app.add_handler(hndlr.get_conversation_handlers())
         app.run_polling()
     except Exception as e:

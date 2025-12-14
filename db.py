@@ -45,14 +45,14 @@ class Database:
             logger.info("DB migrations successful up")
         except Exception as e:
             raise DBError(f"DB migrations up error: {e}")        
-    def add_habit(self, user_id: int, name: str) -> int:
+    def add_habit(self, uid: int, name: str) -> int:
         name = name.strip()
         try:
             conn = self.connect()
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT id FROM habits WHERE user_id = ? AND name = ?",
-                (user_id, name)
+                (uid, name)
             )
             if cursor.fetchone():
                 raise DBError("Привычка с таким названием уже существует")
@@ -60,10 +60,52 @@ class Database:
                 """
                 INSERT INTO habits (user_id, name, created_at) 
                 VALUES (?, ?, ?)
-                """, (user_id, name, datetime.now())
+                """, (uid, name, datetime.now())
             )
             id = cursor.lastrowid
             conn.commit()
             return id
         except Exception as e:
             raise DBError(f"DBError while adding new habit: {e}")
+    def get_user_habits(self, user_id: int) -> dict:
+        try:
+            conn = self.connect()
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT 
+                    id, name, created_at, last_completed,
+                    current_streak, total_completions
+                FROM habits 
+                WHERE user_id = ? 
+                ORDER BY current_streak DESC, name
+                """,
+                (user_id,)
+            )
+            habits = []
+            for row in cursor.fetchall():
+                habits.append(dict(row))
+            return habits
+        except Exception as e:
+            raise DBError(f"Get habits error: {e}")
+    def delete_habit(self, uid: int, hid: int) -> bool:
+        try:
+            conn = self.connect()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT id FROM habits WHERE id = ? AND user_id = ?",
+                (hid, uid)
+            )
+            exist = cursor.fetchone()
+            if not exist:
+                raise DBError(f"Habit with id:{hid} don't exist")
+            cursor.execute(
+                "DELETE FROM habits WHERE id = ? AND user_id = ?",
+                (hid, uid)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            raise DBError(f"Delete habit error: {e}")
+        
