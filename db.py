@@ -108,4 +108,58 @@ class Database:
             return True
         except Exception as e:
             raise DBError(f"Delete habit error: {e}")
-        
+    
+    def complete_habit(self, hid: int, uid: int) ->dict:
+        try:
+            conn = self.connect()
+            cursor = conn.cursor()
+            try: 
+                cursor.execute(
+                "SELECT * FROM habits WHERE id = ? AND user_id = ?",
+                (hid, uid))
+                habit = cursor.fetchone()
+            except Exception as e:
+                raise DBError(f"Habit not found error: {e}")
+                
+            last_completed = habit['last_completed']
+            today = datetime.now().date().isoformat()
+            if last_completed == today:
+                raise DBError("Habit is completed today")
+
+            if last_completed:
+                last_date = datetime.strptime(last_completed, '%d-%m-%Y').date()
+                days_diff = (datetime.now().date() - last_date).days
+                if days_diff == 1:
+                    new_streak = habit['current_streak'] + 1
+                else:
+                    new_streak = 1
+            else:
+                new_streak = 1
+            
+            try:    
+                cursor.execute(
+                """
+                UPDATE habits 
+                SET last_completed = ?,
+                    current_streak = ?,
+                    total_completions = total_completions + 1
+                WHERE id = ? AND user_id = ?
+                """,
+                (today, new_streak, hid, uid)
+                
+                )
+            except:
+                raise DBError(f"Habit update error: {e}")
+            conn.commit()
+            try: 
+                cursor.execute(
+                "SELECT * FROM habits WHERE id = ? AND user_id = ?",
+                (hid, uid)
+                )
+                updated_habit = cursor.fetchone()
+            
+                return dict(updated_habit)
+            except Exception as e:
+                raise DBError(f"New habit get error: {e}")
+        except Exception as e:
+            raise DBError(f"Habit complete error: {e}")

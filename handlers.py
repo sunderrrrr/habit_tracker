@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, Comm
 import config
 from exceptions import TGBotError
 import re
-
+from datetime import datetime
 ADD_HABIT, DELETE_SELECT, DELETE_CONFIRM = range(3)
 class Handler:
     
@@ -43,6 +43,8 @@ class Handler:
         return [
              MessageHandler(filters.Text("📋 Мои привычки"), self.habits_list),
              MessageHandler(filters.Text("🗑️ Удалить привычку"), self.habits_list_to_delete),
+             MessageHandler(filters.Text("✅ Выполнить привычку"), self.habits_list_to_complete),
+            MessageHandler(filters.Regex(r'☑️ .*\(ID: \d+\)'), self.complete_habit),
         ]
     def get_conversation_handlers(self):
         add_habit_dialog = ConversationHandler(
@@ -123,13 +125,13 @@ class Handler:
             habits = self.db.get_user_habits(update.effective_user.id)
             
             if not habits:
-                await update.message.reply_text(
+                await self.reply(update,
                     config.no_habits_msg,
-                    reply_markup=self.get_kb()
+                    keyboard=self.get_kb()
                 )
                 return
             
-            message = "📋*Ваши привычки:*\n\n"
+            message = "📋Ваши привычки:\n\n"
             
             for habit in habits:
                 streak = habit['current_streak']
@@ -144,15 +146,21 @@ class Handler:
                 else:
                     emoji = "📝"                
                 last_date = habit['last_completed'] or "Никогда"
-                message += f""" {emoji} *{habit['name']}*\n📅 Серия: {streak} дней\n📊 Всего выполнено: {habit['total_completions']} раз\n🗓️ Последнее выполнение: {last_date}\n ID: {habit["id"]}\n\n"""
+                new_date = ""
+                if last_date != "Никогда":
+                    last_date = str(last_date).split("-")
+                    new_date = f"{last_date[2]}.{last_date[1]}.{last_date[0]}"
+                else:
+                    new_date = last_date
+                message += f"""{emoji} {habit['name']}\n\n Статистика: \n\n📅 Серия: {streak} дней\n📊 Всего выполнено: {habit['total_completions']} раз\n🗓️ Последнее выполнение: {new_date}\n#️⃣ ID: {habit["id"]}\n\n"""
             
-            await update.message.reply_text(
+            await self.reply(update,
                 message,
-                reply_markup=self.get_kb(),
-                parse_mode='Markdown'
+                keyboard=self.get_kb(),
             )
             
         except Exception as e:
+            await self.reply(update, "Ошибка вывода списка привычек")
             raise TGBotError(f"Error: {e}")
         
     """
@@ -164,8 +172,8 @@ class Handler:
             habits = self.db.get_user_habits(update.effective_user.id)  
             if not habits:
                 await self.reply(update, 
-                                config.no_habits_msg,
-                                self.get_kb)
+                                config.no_habits_to_delete_msg,
+                                self.get_kb())
                 return
             kb = []
             for habit in habits:
@@ -175,16 +183,17 @@ class Handler:
                     ReplyKeyboardMarkup(kb, resize_keyboard=True)
             )
         except Exception as e:
-            raise TGBotError(f"Ошибка удаления привычки: {e}")
+            await self.reply(update, "Ошибка вывода списка привычек для удаления")
+            raise TGBotError(f"Habit delete error: {e}")
     
     async def delete_confirm(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         
         if update.message.text == "Нет, я передумал":
-            self.reply(update, "Удаление отменено!", keyboard=self.get_kb)
+            await self.reply(update, "Удаление отменено!", keyboard=self.get_kb())
             return ConversationHandler.END
         match = re.search(r'\(ID: (\d+)\)', update.message.text)
         if not match:
-            await self.reply(update, text="Неверный формат данных", keyboard=self.get_kb)
+            await self.reply(update, "Неверный формат данных", keyboard=self.get_kb())
             raise TGBotError(f"Invalid input data: {match}")
         
         hid = int(match.group(1))
@@ -192,9 +201,9 @@ class Handler:
         habit_name = update.message.text.replace("🗑️ ", "").split(" (ID:")[0]
         
         confirm_btns = [["Да, удалить", "Нет, я передумал"], [config.back_btn_text]]
-        await update.message.reply_text(
+        await self.reply(update,
         f"Вы уверены что хотите удалить привычку '{habit_name}'?\n\nЭто действие не может быть прервано!", 
-        reply_markup=ReplyKeyboardMarkup(confirm_btns, resize_keyboard=True))
+        keyboard=ReplyKeyboardMarkup(confirm_btns, resize_keyboard=True))
         
         return DELETE_CONFIRM
     
@@ -221,10 +230,64 @@ class Handler:
             is_deleted = self.db.delete_habit(update.effective_user.id, hid)
             if is_deleted:
                 await self.reply(update, "Привычка успешно удалена", keyboard=self.get_kb())
+                
             else:
                 await self.reply(update, "Привычка не найдена", keyboard=self.get_kb())
-            
+                return ConversationHandler.END
+
             return ConversationHandler.END
             
         except Exception as e:
             raise TGBotError(f"Habit delete error: {e}")
+    
+    """
+    Реализация логики выполнения привычки
+    """
+    
+    async def habits_list_to_complete(self, update:Update, ctx: ContextTypes.DEFAULT_TYPE):
+        try:
+            habits = self.db.get_user_habits(update.effective_user.id)
+            
+            if not habits:
+                await self.reply(update, config.no_habits_msg, keyboard=self.get_kb())
+                return
+            kb = []
+            for habit in habits:
+                today = datetime.now().date().isoformat()
+                if habit["last_completed"] != today:
+                    kb.append([f"☑️ {habit['name']} (ID: {habit['id']})"])      
+            if not kb:
+                await self.reply(update, "Все привычки на сегодня выполнены! Вы молодец")
+                return ConversationHandler.END
+            kb.append([config.back_btn_text])
+            
+            await self.reply(update, "Какую привычку вы хотите выполнить?",
+                    ReplyKeyboardMarkup(kb, resize_keyboard=True)
+            )
+        except Exception as e:
+            await self.reply(update, "Ошибка выполнения привычки",
+                    ReplyKeyboardMarkup(kb, resize_keyboard=True)
+            )
+            raise TGBotError(f"Error get habits list to complete: {e}")
+    
+    async def complete_habit(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+        if update.message.text == config.back_btn_text:
+            await self.cancel_command(update, ctx)
+            return ConversationHandler.END
+        match = re.search(r'\(ID: (\d+)\)', update.message.text)
+        if not match:
+            await self.reply(update, "Неверный формат ввода", keyboard=self.get_kb())
+            return
+        hid = int(match.group(1))
+        
+        try:
+            res = self.db.complete_habit(hid, update.effective_user.id)
+            await self.reply(update, f'Поздравляем! Привычка {res["name"]} выполнена!\n\nВы делаете это уже {res["current_streak"]} дней подряд!\n\nПродолжайте в том же духе!')
+        except Exception as e:
+            if "not found" in str(e):
+                await self.reply(update, "Привычка не найдена, проверьте введенные данные!", keyboard=self.get_kb())
+                raise TGBotError(f'Habit with id:{res["id"]} not found to complete')
+            if "is completed today" in str(e):
+                await self.reply(update, "Вы опережаете план, но привычка уже выполнена сегодня!")
+                raise TGBotError(f'Habit with id:{res["id"]} already completed today')
+            
