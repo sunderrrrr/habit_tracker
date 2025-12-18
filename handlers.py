@@ -133,6 +133,8 @@ class Handler:
                 self.habits_list_to_complete,
             ),
             MessageHandler(filters.Regex(r"☑️ .*\(ID: \d+\)"), self.complete_habit),
+            MessageHandler(filters.Text(config.back_btn_text), self.cancel_command),
+
         ]
 
     def get_conversation_handlers(self) -> List[ConversationHandler]:
@@ -324,7 +326,7 @@ class Handler:
                 return ConversationHandler.END
             kb = []
             for habit in habits:
-                kb.append([f"🗑️ {habit['name']} (ID: {habit['id']})"])
+                kb.append([f"🗑️ {habit.get("name", "Не найдено")} (ID: {habit.get("id", 0)})"])
             kb.append([config.back_btn_text])
             await self.reply(
                 update,
@@ -445,8 +447,9 @@ class Handler:
             kb = []
             for habit in habits:
                 today = datetime.now().date().isoformat()
-                if habit["last_completed"] != today:
-                    kb.append([f"☑️ {habit['name']} (ID: {habit['id']})"])
+                last_comp = habit.get("last_completed", "")
+                if not last_comp and last_comp!= today:
+                    kb.append([f"☑️ {habit.get("name", "Не найдено")} (ID: {habit.get("id", 0)})"])
             if not kb:
                 await self.reply(
                     update,

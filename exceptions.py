@@ -6,3 +6,5 @@ class DBError(InternalError):
 
 class TGBotError(InternalError):
     pass
+class ServiceError(InternalError):
+    pass

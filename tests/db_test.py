@@ -168,7 +168,7 @@ def test_complete_habit_success():
     habit_data = {
         "id": 1,
         "user_id": 12345,
-        "last_completed": "2025-12-18",
+        "last_completed": "2025-12-17",
         "current_streak": 5,
         "total_completions": 10,
     }
@@ -181,9 +181,9 @@ def test_complete_habit_success():
 
     with patch("db.datetime") as mock_datetime:
         mock_now = Mock()
-        mock_now.date.return_value = date(2025, 12, 18)
-        mock_datetime.now.return_value = mock_now
-        mock_datetime.strptime.return_value = date(2025, 12, 18)
+        mock_now.date.return_value = datetime(2025, 12, 18)
+        mock_datetime.strptime.return_value = Mock()
+        mock_datetime.strptime.return_value.date.return_value = date(2025, 12, 17)
 
         result = db.complete_habit(1, 12345)
 

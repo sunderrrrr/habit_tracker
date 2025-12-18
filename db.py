@@ -215,16 +215,19 @@ class Database:
             except Exception as e:
                 raise DBError(f"Habit not found error: {e}")
 
-            last_completed = habit["last_completed"]
+            try:
+                last_completed = habit["last_completed"]
+            except:
+                raise KeyError
             today = datetime.now().date().isoformat()
-            if last_completed == today:
+            if last_completed and last_completed == today:
                 raise DBError("Habit is completed today")
-
+            
             if last_completed:
                 last_date = datetime.strptime(last_completed, "%Y-%m-%d").date()
                 days_diff = (datetime.now().date() - last_date).days
                 if days_diff == 1:
-                    new_streak = habit["current_streak"] + 1
+                    new_streak = habit.get("current_streak", 0) + 1
                 else:
                     new_streak = 1
             else:

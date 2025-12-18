@@ -4,6 +4,7 @@ import logging
 from db import Database
 from handlers import Handler
 import config
+from dotenv import load_dotenv
 from exceptions import TGBotError
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -11,8 +12,9 @@ logging.basicConfig(
 )
 
 def main():
-    #token = os.getenv("TG_BOT_TOKEN")
-    token = "7998592901:AAGxEi2aB1tkCBhtckz4xFjtvmAwNKTlmIE"
+    load_dotenv()
+    token = os.getenv("TG_BOT_TOKEN")
+    
     if not token:
         print(f"no any token in env file: {token}")
         return
