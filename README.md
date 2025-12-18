@@ -15,7 +15,7 @@
 ## 🚀 Запуск бота
 
 ```bash
-git clone https://github.com/your-username/habit-tracker.git
+git clone https://github.com/sunderrrrr/habit_tracker.git
 ```
 
 ```bash

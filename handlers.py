@@ -299,20 +299,10 @@ class Handler:
 
             for habit in habits:
                 streak = habit.get("current_streak", 0)
-                if streak >= 30:
-                    emoji = "🔥"
-                elif streak >= 7:
-                    emoji = "🚀"
-                elif streak >= 3:
-                    emoji = "⭐"
-                elif streak > 0:
-                    emoji = "🆕"
-                else:
-                    emoji = "📝"
                 last_date = self.format_date(
                     habit.get("last_completed", "Никогда")
                 )
-                message += f'{emoji} {habit.get("name", "Не найдено")}\n\n Статистика: \n\n📅 Серия: {streak} дней\n📊 Всего выполнено: {habit.get("total_completions", 0)} раз\n🗓️ Последнее выполнение: {last_date}\n#️⃣ ID: {habit.get("id", 0)}\n\n'
+                message += f'{habit.get("name", "Не найдено")}\n\n Статистика: \n\n📅 Серия: {streak} дней\n📊 Всего выполнено: {habit.get("total_completions", 0)} раз\n🗓️ Последнее выполнение: {last_date}\n#️⃣ ID: {habit.get("id", 0)}\n\n'
 
             await self.reply(
                 update,
@@ -482,7 +472,7 @@ class Handler:
         try:
             habits = self.db.get_user_habits(update.effective_user.id)
 
-            if not habits:
+            if not habits: 
                 await self.reply(
                     update, config.no_habits_msg, keyboard=self.get_kb()
                 )
