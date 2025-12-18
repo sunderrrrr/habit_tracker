@@ -12,12 +12,15 @@ sys.path.insert(
 from db import Database
 from exceptions import DBError
 
+
 def convert_to_mock_row(row):
     mock_row = Mock()
     mock_row.__getitem__ = Mock(side_effect=lambda key: row[key])
     mock_row.get.side_effect = lambda key, default=None: row.get(key, default)
     mock_row.keys.return_value = row.keys()
     return mock_row
+
+
 def test_db_init_success():
     """
     Позитивный тест на инициализацию БД
@@ -183,7 +186,9 @@ def test_complete_habit_success():
         mock_now = Mock()
         mock_now.date.return_value = datetime(2025, 12, 18)
         mock_datetime.strptime.return_value = Mock()
-        mock_datetime.strptime.return_value.date.return_value = date(2025, 12, 17)
+        mock_datetime.strptime.return_value.date.return_value = date(
+            2025, 12, 17
+        )
 
         result = db.complete_habit(1, 12345)
 
@@ -203,7 +208,7 @@ def test_habit_already_complete():
 
     habit_data = {
         "id": 1,
-        "user_id":12345,
+        "user_id": 12345,
         "last_completed": "2025-12-18",
         "current_streak": 5,
     }

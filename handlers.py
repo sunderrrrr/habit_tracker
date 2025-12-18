@@ -57,12 +57,14 @@ class Handler:
             raise ServiceError("Date format error")
 
     def get_habit_id(self, text) -> int:
-        match = re.search(r"\(ID:\s*(\d+)\)", text)
+        match = re.search(r"\(ID\s*:\s*(\d+)\)", text)
         if not match:
             raise ServiceError(f"Invalid format data error")
         return int(match.group(1))
 
-    async def start(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    async def start(
+        self, update: Update, ctx: ContextTypes.DEFAULT_TYPE
+    ) -> None:
         """
         Обработчик команды /start
 
@@ -106,7 +108,9 @@ class Handler:
 
         try:
             if update.message:
-                await update.message.reply_text(text, reply_markup=keyboard or self.kb)
+                await update.message.reply_text(
+                    text, reply_markup=keyboard or self.kb
+                )
             elif update.callback_query:
                 await update.callback_query.message.reply_text(
                     text, reply_markup=keyboard or self.kb
@@ -132,9 +136,12 @@ class Handler:
                 filters.Text("✅ Выполнить привычку"),
                 self.habits_list_to_complete,
             ),
-            MessageHandler(filters.Regex(r"☑️ .*\(ID: \d+\)"), self.complete_habit),
-            MessageHandler(filters.Text(config.back_btn_text), self.cancel_command),
-
+            MessageHandler(
+                filters.Regex(r"☑️ .*\(ID: \d+\)"), self.complete_habit
+            ),
+            MessageHandler(
+                filters.Text(config.back_btn_text), self.cancel_command
+            ),
         ]
 
     def get_conversation_handlers(self) -> List[ConversationHandler]:
@@ -153,11 +160,15 @@ class Handler:
             ],
             states={
                 ADD_HABIT: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.set_habit_name)
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND, self.set_habit_name
+                    )
                 ],
             },
             fallbacks=[
-                MessageHandler(filters.Text(config.back_btn_text), self.cancel_command),
+                MessageHandler(
+                    filters.Text(config.back_btn_text), self.cancel_command
+                ),
                 CommandHandler("cancel", self.cancel_command),
             ],
         )
@@ -178,11 +189,15 @@ class Handler:
                     ),
                 ],
                 DELETE_CONFIRM: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.delete_process)
+                    MessageHandler(
+                        filters.TEXT & ~filters.COMMAND, self.delete_process
+                    )
                 ],
             },
             fallbacks=[
-                MessageHandler(filters.Text(config.back_btn_text), self.cancel_command),
+                MessageHandler(
+                    filters.Text(config.back_btn_text), self.cancel_command
+                ),
                 CommandHandler("cancel", self.cancel_command),
             ],
         )
@@ -259,7 +274,9 @@ class Handler:
     Метод получения и форматированного вывода всех привычек пользователя
     """
 
-    async def habits_list(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    async def habits_list(
+        self, update: Update, ctx: ContextTypes.DEFAULT_TYPE
+    ) -> None:
         """
         Метод получения и форматированного вывода всех привычек пользователя
 
@@ -273,7 +290,9 @@ class Handler:
             habits = self.db.get_user_habits(update.effective_user.id)
 
             if not habits:
-                await self.reply(update, config.no_habits_msg, keyboard=self.get_kb())
+                await self.reply(
+                    update, config.no_habits_msg, keyboard=self.get_kb()
+                )
                 return
 
             message = "📋Ваши привычки:\n\n"
@@ -290,8 +309,10 @@ class Handler:
                     emoji = "🆕"
                 else:
                     emoji = "📝"
-                last_date = self.format_date(habit.get("last_completed", "Никогда"))
-                message += f"""{emoji} {habit.get("name", "Не найдено")}\n\n Статистика: \n\n📅 Серия: {streak} дней\n📊 Всего выполнено: {habit.get("total_completions", 0)} раз\n🗓️ Последнее выполнение: {last_date}\n#️⃣ ID: {habit.get("id", 0)}\n\n"""
+                last_date = self.format_date(
+                    habit.get("last_completed", "Никогда")
+                )
+                message += f'{emoji} {habit.get("name", "Не найдено")}\n\n Статистика: \n\n📅 Серия: {streak} дней\n📊 Всего выполнено: {habit.get("total_completions", 0)} раз\n🗓️ Последнее выполнение: {last_date}\n#️⃣ ID: {habit.get("id", 0)}\n\n'
 
             await self.reply(
                 update,
@@ -322,11 +343,17 @@ class Handler:
         try:
             habits = self.db.get_user_habits(update.effective_user.id)
             if not habits:
-                await self.reply(update, config.no_habits_to_delete_msg, self.get_kb())
+                await self.reply(
+                    update, config.no_habits_to_delete_msg, self.get_kb()
+                )
                 return ConversationHandler.END
             kb = []
             for habit in habits:
-                kb.append([f"🗑️ {habit.get("name", "Не найдено")} (ID: {habit.get("id", 0)})"])
+                kb.append(
+                    [
+                        f"🗑️ {habit.get("name", "Не найдено")} (ID: {habit.get("id", 0)})"
+                    ]
+                )
             kb.append([config.back_btn_text])
             await self.reply(
                 update,
@@ -335,7 +362,9 @@ class Handler:
             )
             return DELETE_SELECT
         except Exception as e:
-            await self.reply(update, "Ошибка вывода списка привычек для удаления")
+            await self.reply(
+                update, "Ошибка вывода списка привычек для удаления"
+            )
             raise TGBotError(f"Habit delete error: {e}")
 
     async def delete_confirm(
@@ -354,7 +383,9 @@ class Handler:
         """
 
         if update.message.text == "Нет, я передумал":
-            await self.reply(update, "Удаление отменено!", keyboard=self.get_kb())
+            await self.reply(
+                update, "Удаление отменено!", keyboard=self.get_kb()
+            )
             return ConversationHandler.END
         hid = self.get_habit_id(update.message.text)
         ctx.user_data["habit_to_del"] = hid
@@ -363,7 +394,9 @@ class Handler:
         await self.reply(
             update,
             f"Вы уверены что хотите удалить привычку '{habit_name}'?\n\nЭто действие не может быть прервано!",
-            keyboard=ReplyKeyboardMarkup(config.confirm_btns, resize_keyboard=True),
+            keyboard=ReplyKeyboardMarkup(
+                config.confirm_btns, resize_keyboard=True
+            ),
         )
 
         return DELETE_CONFIRM
@@ -385,11 +418,15 @@ class Handler:
 
         try:
             if update.message.text == "Нет, я передумал":
-                await self.reply(update, "Удаление отменено!", keyboard=self.get_kb())
+                await self.reply(
+                    update, "Удаление отменено!", keyboard=self.get_kb()
+                )
                 return ConversationHandler.END
 
             if update.message.text == config.back_btn_text:
-                await self.reply(update, "Удаление отменено!", keyboard=self.get_kb())
+                await self.reply(
+                    update, "Удаление отменено!", keyboard=self.get_kb()
+                )
                 return ConversationHandler.END
 
             if update.message.text != "Да, удалить":
@@ -401,7 +438,9 @@ class Handler:
 
             hid = ctx.user_data.get("habit_to_del")
             if not hid:
-                await self.reply(update, "Привычка не найдена", keyboard=self.get_kb())
+                await self.reply(
+                    update, "Привычка не найдена", keyboard=self.get_kb()
+                )
                 return ConversationHandler.END
 
             is_deleted = self.db.delete_habit(update.effective_user.id, hid)
@@ -411,7 +450,9 @@ class Handler:
                 )
 
             else:
-                await self.reply(update, "Привычка не найдена", keyboard=self.get_kb())
+                await self.reply(
+                    update, "Привычка не найдена", keyboard=self.get_kb()
+                )
                 return ConversationHandler.END
 
             return ConversationHandler.END
@@ -442,14 +483,20 @@ class Handler:
             habits = self.db.get_user_habits(update.effective_user.id)
 
             if not habits:
-                await self.reply(update, config.no_habits_msg, keyboard=self.get_kb())
+                await self.reply(
+                    update, config.no_habits_msg, keyboard=self.get_kb()
+                )
                 return
             kb = []
             for habit in habits:
                 today = datetime.now().date().isoformat()
                 last_comp = habit.get("last_completed", "")
-                if not last_comp and last_comp!= today:
-                    kb.append([f"☑️ {habit.get("name", "Не найдено")} (ID: {habit.get("id", 0)})"])
+                if not last_comp or last_comp != today:
+                    kb.append(
+                        [
+                            f"☑️ {habit.get("name", "Не найдено")} (ID: {habit.get("id", 0)})"
+                        ]
+                    )
             if not kb:
                 await self.reply(
                     update,
